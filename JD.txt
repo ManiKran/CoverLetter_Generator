@@ -1,0 +1,55 @@
+What You'll Need:
+
+Need to have: 
+
+2+ years experience in a data analytics role
+
+2+ years experience building Machine Learning models
+
+2+ years advanced programming skills in Python
+
+High Proficiency in SQL and knowledge of RDBMs like Postgres and Redshift
+
+Experience with ETL processing and data wrangling including fetching, munging, cleaning, pivoting, analyzing, aggregating, distributing, and visualizing
+
+Basic knowledge of statistics, algorithms, data structures, and machine learning
+
+Bachelor’s or higher in a quantitative field
+
+Nice to have:
+
+Experience with digital advertising technology
+
+Experience with AWS
+
+Experience with Spark and the big data ecosystem
+
+Experience using Git and the Unix command-line
+
+Familiarity with Airflow and Docker
+
+Familiarity calling RESTful web services, specifically social APIs (Facebook, Twitter, LinkedIn, YouTube, etc.)
+
+Familiarity with BI tools (Tableau, Sisense)
+
+                                                                             
+
+What You'll Bring:
+
+Respect for others and a strong belief that others should do this in return
+
+Experience with various technical disciplines and applications
+
+Close attention to detail, following up until issues are resolved
+
+Ability to multitask on a variety of critical projects
+
+Ability to work independently, while also collaborating with others
+
+Strong communication skills, with the ability to communicate moderately complex technical information within the team
+
+Skills to recognize and solve frequently occurring problems
+
+Analytical thinking
+
+Resourcefulness and independent judgement
