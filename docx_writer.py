@@ -1,49 +1,85 @@
-# docx_writer.py
-
 from docx import Document
-from docx.shared import Pt
+from docx.shared import Pt, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-import os
+from docx.oxml.ns import qn
+import re
 
-def save_cover_letter_to_docx(text: str, role: str, company: str, output_dir: str = "outputs"):
-    os.makedirs(output_dir, exist_ok=True)
-    file_path = os.path.join(
-        output_dir,
-        f"cover_letter_{role.replace(' ', '_')}_{company.replace(' ', '_')}.docx"
-    )
+def set_margins(section):
+    section.top_margin = Inches(0.7)
+    section.bottom_margin = Inches(0.7)
+    section.left_margin = Inches(1)
+    section.right_margin = Inches(1)
 
+def save_cover_letter(content, filename, full_name, email, phone, linkedin):
     doc = Document()
-    lines = text.strip().splitlines()
-    
-    # Extract name and contact info
-    name = lines[0].strip() if lines else "Full Name"
-    contact = lines[1].strip() if len(lines) > 1 else "email@example.com | (123) 456-7890 | linkedin.com/in/example"
+    set_margins(doc.sections[0])
 
-    # Name formatting
+    # Add name (bold + centered)
     name_para = doc.add_paragraph()
-    name_run = name_para.add_run(name)
-    name_run.font.name = "Times New Roman"
-    name_run.font.size = Pt(14)
     name_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    name_run = name_para.add_run(full_name)
+    name_run.bold = True
+    name_run.font.name = "Times New Roman"
+    name_run._element.rPr.rFonts.set(qn('w:eastAsia'), 'Times New Roman')
+    name_run.font.size = Pt(14)
 
-    # Contact formatting
-    contact_para = doc.add_paragraph()
-    contact_run = contact_para.add_run(contact)
-    contact_run.font.name = "Times New Roman"
-    contact_run.font.size = Pt(12)
+    # Add contact info
+    contact_info = f"{email} | {phone} | {linkedin}"
+    contact_para = doc.add_paragraph(contact_info)
     contact_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    contact_run = contact_para.runs[0]
+    contact_run.font.name = "Times New Roman"
+    contact_run._element.rPr.rFonts.set(qn('w:eastAsia'), 'Times New Roman')
+    contact_run.font.size = Pt(12)
 
-    doc.add_paragraph()  # Spacer
+    # Add one blank line
+    doc.add_paragraph("")
 
-    # Body formatting
-    for line in lines[2:]:
-        if line.strip() == "":
-            doc.add_paragraph()
-        else:
-            para = doc.add_paragraph()
-            run = para.add_run(line.strip())
-            run.font.name = "Times New Roman"
-            run.font.size = Pt(12)
+    # Prepare content lines
+    body_lines = content.strip().split("\n")
 
-    doc.save(file_path)
-    print(f"✅ Cover letter saved to: {file_path}")
+    paragraph_buffer = []
+    for line in body_lines:
+        line = line.strip().strip("*")  # Remove leading/trailing asterisks
+        if not line:
+            continue
+        paragraph_buffer.append(line)
+
+    inserted_sincerely = False
+
+    for i, line in enumerate(paragraph_buffer):
+        # Skip LLM-generated "Sincerely" line
+        if line.lower().startswith("sincerely"):
+            continue
+
+        # Add paragraph
+        para = doc.add_paragraph(line)
+        para.paragraph_format.line_spacing = 1.15
+        para.paragraph_format.space_after = Pt(6)
+        para.paragraph_format.space_before = Pt(0)
+
+        run = para.runs[0]
+        run.font.name = "Times New Roman"
+        run._element.rPr.rFonts.set(qn('w:eastAsia'), 'Times New Roman')
+        run.font.size = Pt(12)
+
+        # Add space after date
+        if re.match(r"^[A-Z][a-z]+ \d{1,2}, \d{4}$", line):
+            doc.add_paragraph("")  # space after date
+
+        # Add space before "Sincerely"
+        if line.strip().startswith("A job opportunity at"):
+            doc.add_paragraph("")  # space before closing
+
+        # After last paragraph, insert Sincerely + Name manually
+        if i == len(paragraph_buffer) - 1 and not inserted_sincerely:
+            closing_para = doc.add_paragraph(f"Sincerely,\n{full_name}")
+            closing_para.paragraph_format.space_after = Pt(0)
+            closing_para.paragraph_format.line_spacing = 1.15
+            closing_run = closing_para.runs[0]
+            closing_run.font.name = "Times New Roman"
+            closing_run._element.rPr.rFonts.set(qn('w:eastAsia'), 'Times New Roman')
+            closing_run.font.size = Pt(12)
+            inserted_sincerely = True
+
+    doc.save(filename)

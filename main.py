@@ -5,25 +5,28 @@ import pdfplumber
 from dotenv import load_dotenv
 from extract_skills import extract_skills_from_text
 from generate_cover_letter import generate_cover_letter, match_skills
-from docx_writer import save_cover_letter_to_docx
+from docx_writer import save_cover_letter
 
-def read_pdf_text(path):
-    try:
-        with pdfplumber.open(path) as pdf:
-            return "\n".join(page.extract_text() or "" for page in pdf.pages).strip()
-    except Exception as e:
-        raise RuntimeError(f"❌ Error reading resume PDF: {e}")
+load_dotenv()
 
-def read_txt(path):
+def extract_text_from_pdf(pdf_path):
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            return f.read().strip()
+        with pdfplumber.open(pdf_path) as pdf:
+            text = "\n".join(page.extract_text() or "" for page in pdf.pages)
+        return text
     except Exception as e:
-        raise RuntimeError(f"❌ Error reading job description: {e}")
+        print(f"❌ Error reading PDF: {e}")
+        return ""
+
+def read_txt_file(file_path):
+    try:
+        with open(file_path, "r") as file:
+            return file.read()
+    except Exception as e:
+        print(f"❌ Error reading TXT file: {e}")
+        return ""
 
 def main():
-    load_dotenv()
-
     print("\n📄 GPT-4o Cover Letter Generator (via GitHub-hosted LLM)\n")
 
     role = input("Enter the job role you're applying for: ").strip()
@@ -31,28 +34,32 @@ def main():
     resume_path = input("Path to your resume PDF: ").strip()
     jd_path = input("Path to job description TXT file: ").strip()
 
-    try:
-        resume_text = read_pdf_text(resume_path)
-        jd_text = read_txt(jd_path)
-    except Exception as e:
-        print(e)
-        return
+    full_name = input("Your full name: ").strip()
+    email = input("Your email: ").strip()
+    phone = input("Your phone number: ").strip()
+    linkedin = input("Your LinkedIn URL: ").strip()
 
     print("\n🔍 Extracting skills...")
-    resume_skills = extract_skills_from_text(resume_text, "resume")
-    jd_skills = extract_skills_from_text(jd_text, "job_description")
+
+    resume_text = extract_text_from_pdf(resume_path)
+    jd_text = read_txt_file(jd_path)
+
+    resume_skills = extract_skills_from_text(resume_text, source="resume")
+    jd_skills = extract_skills_from_text(jd_text, source="job description")
     matched = match_skills(resume_skills, jd_skills)
-    print(f"✅ Matched Skills: {matched}\n")
 
-    print("✍️ Generating cover letter...")
-    letter = generate_cover_letter(resume_text, jd_text, matched, role, company)
+    print(f"\n✅ Matched Skills: {matched}\n")
 
-    if not letter.strip():
+    print("✍️ Generating cover letter...\n")
+    cover_letter = generate_cover_letter(resume_text, jd_text, matched, role, company)
+
+    if cover_letter:
+        filename = f"outputs/cover_letter_{role.replace(' ', '_')}_{company.replace(' ', '_')}.docx"
+        os.makedirs("outputs", exist_ok=True)
+        save_cover_letter(cover_letter, filename, full_name, email, phone, linkedin)
+        print(f"✅ Cover letter saved to: {filename}")
+    else:
         print("❌ No cover letter generated.")
-        return
-
-    print("\n💾 Saving cover letter to DOCX...")
-    save_cover_letter_to_docx(letter, role, company)
 
 if __name__ == "__main__":
     main()

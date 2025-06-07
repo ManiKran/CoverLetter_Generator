@@ -1,13 +1,14 @@
 # generate_cover_letter.py
 
 import os
+from datetime import datetime
 from openai import OpenAI
 from dotenv import load_dotenv
 from prompts.prompt_templates import get_system_prompt
 
 load_dotenv()
 
-# Initialize OpenAI client for GitHub-hosted model
+# Initialize OpenAI client for GitHub-hosted GPT-4o
 client = OpenAI(
     api_key=os.environ["GITHUB_TOKEN"],
     base_url="https://models.github.ai/inference"
@@ -20,9 +21,12 @@ def match_skills(resume_skills, jd_skills):
 
 def generate_cover_letter(resume_text, jd_text, matched_skills, role, company):
     system_prompt = get_system_prompt()
+    today = datetime.today().strftime("%B %d, %Y")  # e.g., "June 7, 2025"
 
     user_prompt = f"""
 Generate a personalized and concise cover letter for the role of "{role}" at "{company}".
+
+Today's Date: {today}
 
 Resume:
 {resume_text}
