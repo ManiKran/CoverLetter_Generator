@@ -1,35 +1,42 @@
 # extract_skills.py
 
 import os
-import openai
 from dotenv import load_dotenv
+from openai import OpenAI
 
 load_dotenv()
 
-# Your working GitHub-hosted config
-openai.api_key = os.environ["GITHUB_TOKEN"]
-openai.api_base = "https://models.github.ai/inference"
+client = OpenAI(
+    api_key=os.environ["GITHUB_TOKEN"],
+    base_url="https://models.github.ai/inference"
+)
+
 model_name = "openai/gpt-4o"
 
-def extract_skills_from_text(input_text: str, content_type: str = "resume") -> list:
-    user_prompt = (
-        f"Here is a {content_type.replace('_', ' ')}:\n\n{input_text}\n\n"
-        "Extract all relevant technical and soft skills as a Python list."
-    )
+def extract_skills_from_text(text, source="resume"):
+    prompt = f"""
+Extract a list of technical and soft skills from the following {source} text. 
+Return the skills as a Python list of strings. Do not include duplicates.
+
+Text:
+{text}
+"""
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model=model_name,
             messages=[
-                {"role": "system", "content": "You are a helpful assistant that extracts skills from resumes and job descriptions."},
-                {"role": "user", "content": user_prompt}
+                {"role": "system", "content": "You are an expert resume/job description parser."},
+                {"role": "user", "content": prompt}
             ],
-            temperature=0.2,
+            temperature=0.3,
             max_tokens=300
         )
+        raw = response.choices[0].message.content.strip()
 
-        result = response.choices[0].message.content.strip()
-        return eval(result) if result.startswith("[") else []
+        # Try to safely evaluate it as a list
+        skills = eval(raw) if raw.startswith("[") else []
+        return [s.strip() for s in skills if isinstance(s, str)]
 
     except Exception as e:
         print(f"❌ Error extracting skills: {e}")

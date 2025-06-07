@@ -1,15 +1,18 @@
 # generate_cover_letter.py
 
 import os
-import openai
+from openai import OpenAI
 from dotenv import load_dotenv
 from prompts.prompt_templates import get_system_prompt
 
 load_dotenv()
 
-# Use your working GitHub-hosted GPT-4o setup
-openai.api_key = os.environ["GITHUB_TOKEN"]
-openai.api_base = "https://models.github.ai/inference"
+# Initialize OpenAI client for GitHub-hosted model
+client = OpenAI(
+    api_key=os.environ["GITHUB_TOKEN"],
+    base_url="https://models.github.ai/inference"
+)
+
 model_name = "openai/gpt-4o"
 
 def match_skills(resume_skills, jd_skills):
@@ -35,7 +38,7 @@ Use a professional tone and follow the format in the system prompt.
 """
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model=model_name,
             messages=[
                 {"role": "system", "content": system_prompt},
