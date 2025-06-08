@@ -2,25 +2,26 @@ from fastapi import FastAPI, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 import os
-from generate_cover_letter import generate_cover_letter
+import pdfplumber
+
+from extract_skills import extract_skills_from_text
+from generate_cover_letter import generate_cover_letter, match_skills
+from docx_writer import save_cover_letter
 
 app = FastAPI()
 
-# Allow frontend (including Lovable) to call this API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Replace "*" with Lovable's actual domain later
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Root route (important for Render health check or basic test)
 @app.get("/")
 def root():
     return {"message": "Cover letter API is running!"}
 
-# Generate cover letter endpoint
 @app.post("/generate")
 async def generate(
     full_name: str = Form(...),
@@ -28,7 +29,9 @@ async def generate(
     phone: str = Form(...),
     linkedin: str = Form(""),
     job_description: str = Form(...),
-    resume_file: UploadFile = Form(...)
+    resume_file: UploadFile = Form(...),
+    role: str = Form(...),
+    company: str = Form(...)
 ):
     try:
         os.makedirs("uploads", exist_ok=True)
@@ -38,9 +41,21 @@ async def generate(
         with open(resume_path, "wb") as f:
             f.write(await resume_file.read())
 
-        output_path, preview = generate_cover_letter(
-            resume_path, job_description, full_name, email, phone, linkedin
-        )
+        # Extract resume text from PDF
+        with pdfplumber.open(resume_path) as pdf:
+            resume_text = "\n".join(page.extract_text() or "" for page in pdf.pages)
+
+        # Extract skills
+        resume_skills = extract_skills_from_text(resume_text, source="resume")
+        jd_skills = extract_skills_from_text(job_description, source="job description")
+        matched = match_skills(resume_skills, jd_skills)
+
+        # Generate cover letter
+        preview = generate_cover_letter(resume_text, job_description, matched, role, company)
+
+        # Save to DOCX
+        output_path = "outputs/latest_cover_letter.docx"
+        save_cover_letter(preview, output_path, full_name, email, phone, linkedin)
 
         return JSONResponse({
             "message": "Cover letter generated successfully.",
@@ -51,7 +66,6 @@ async def generate(
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-# Endpoint to download the latest generated cover letter
 @app.get("/download")
 def download():
     file_path = "outputs/latest_cover_letter.docx"
